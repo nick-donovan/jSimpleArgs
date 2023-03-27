@@ -243,11 +243,11 @@ public class Argument {
   public List<String> getValues() { return Collections.unmodifiableList(this.values); }
 
   /**
-   * Returns the first value in the values list associated with this argument as a string.
+   * Returns the first value in the values list associated with this argument as a string or {@code null} if there is none.
    *
-   * @return the first value in the values list associated with this argument as a string
+   * @return the first value in the values list associated with this argument as a string or {@code null} if there is none
    */
-  public String getValue() { return this.values.get(0); }
+  public String getValue() { return values.isEmpty() ? null : this.values.get(0); }
 
   /**
    * Returns the short name of this argument.
