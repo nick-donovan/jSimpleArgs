@@ -3,7 +3,7 @@
 jSimpleArgs is a flexible and powerful library for parsing command-line arguments in Java applications, while providing clear and helpful error messages and support for displaying help text to the user. It supports both short and long argument names, as well as assigning values to arguments and concatenating multiple short arguments together.
 
 ### Features
--   Support for short and long option names
+-   Support for short and long argument names
 -   Support for optional and required arguments
 -   Automatic help message generation
 -   Lightweight and easy to use
