@@ -151,6 +151,9 @@ class Parser {
     // Parse arguments, their associated values, and validate both.
     try {
       parseArguments(args);
+
+      // Check if argument help is requested.
+      if (isArgHelpRequested(jSimpleArgs)) return;
       checkRequiredArgs();
     } catch (IllegalArgumentUsageException | UnknownArgumentException | IllegalValueException e) {
       throw new JSimpleArgsException(e);
@@ -171,6 +174,9 @@ class Parser {
    * @return the {@code Argument} object associated with the given name
    */
   public Argument getArgument(String name) {
+    // Replace hyphens if present, the program doesn't expect them.
+    name = name.replaceAll("^-{0,2}", "");
+
     Argument argument = this.getArgumentLongNames().get(name);
 
     if (argument == null) {
@@ -389,13 +395,14 @@ class Parser {
    *
    * @param jSimpleArgs the JSimpleArgs object being checked
    */
-  private void isArgHelpRequested(JSimpleArgs jSimpleArgs) {
+  private boolean isArgHelpRequested(JSimpleArgs jSimpleArgs) {
     for (Argument argument : this.getArguments())
       if (argument.getShowHelp() && jSimpleArgs.isHelpEnabled()) {
         jSimpleArgs.showHelp();
         System.out.println(argument.getHelp());
-        return;
+        return true;
       }
+    return false;
   }
 
   /**

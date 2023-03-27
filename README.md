@@ -17,42 +17,43 @@ To use JSimpleArgs in your project, simply create an instance of the `JSimpleArg
     import dev.nicholasdonovan.jsimpleargs.JSimpleArgs;
     import dev.nicholasdonovan.jsimpleargs.exceptions.JSimpleArgsException;
     
-    public class MyApplication {
-      public static void main(String[] args) throws JSimpleArgsException {  
-	      // args = {"-i", "/folder1/file1.txt"};  
-	      String parserHelpString = """  
-		     This is an example of a parser help string. 
-		     You can add usage instructions here or other details you like. 
-	      """;  
-	      JSimpleArgs parser = new JSimpleArgs()
-		      .setUsage("Usage: java -jar MyApplication -i <file>")
-		      .setHelp(parserHelpString);  
-	      
-	     try {  
-	        parser.newArgument("i", "input", "The path to the input file.")  
-	            .hasValue()  
-	            .required()  
-	            .help("""  
-                      Input flag help:\s  
-                      This string tells the program which file(s) to scan.\s  
-                      Multiple can be specified, but will be scanned sequentially 
-                      Usage examples:
-                        -i /home/user/path1/file1.txt 
-                        -i /home/user/path1/file1.txt /home/user/path1/file2.txt 
-                        --input /home/user/path1/file1.txt 
-                        --input /home/user/path1/file1.txt /home/user/path1/file2.txt 
-	            """)  
-	            .defaultValue("/default/dir/");  
-	        parser.parse(args);  
-	      } catch (JSimpleArgsException e) {  
-	        System.err.println(e.getMessage());  
-	      }  
-	      
-	      String value = parser.getArgument("i").getValue();  
-	      
-	      System.out.println(value);  
-	      // `/folder1/file1.txt` is printed.  
-	    }
+    public static void main(String[] args) throws JSimpleArgsException {
+      // args = {"-i", "/folder1/file1.txt"};
+      String parserHelpString = """  
+          This is an example of a parser help string.
+            You can add usage instructions here or other details you like.
+          """;
+      JSimpleArgs parser = new JSimpleArgs()
+          .setUsage("Usage: java -jar MyApplication -i <file>")
+          .setHelp(parserHelpString);
+
+      try {
+        parser.newArgument("-i", "--input", "The path to the input file.")
+            .hasValue()
+            .required()
+            .help("""  
+                Input flag help:
+                  This string tells the program which file(s) to scan.
+                  Multiple can be specified, but will be scanned sequentially
+                    Usage examples:
+                      -i /home/user/path1/file1.txt
+                      -i /home/user/path1/file1.txt /home/user/path1/file2.txt
+                      --input /home/user/path1/file1.txt
+                      --input /home/user/path1/file1.txt /home/user/path1/file2.txt
+                """)
+            .defaultValue("/default/dir/");
+        parser.parse(args);
+        if (parser.getShowHelp()) {
+          System.out.println(parser.getHelp());
+        }
+      } catch (JSimpleArgsException e) {
+        System.err.println(e.getMessage());
+      }
+
+      String value = parser.getArgument("-i").getValue();
+
+      System.out.println(value);
+      // `/folder1/file1.txt` is printed.
     }
 
 In this example, we create an JSimpleArgs object and add an argument with the short name -i, long name --input, its description to "The path to the input file.", its need for a value, its requiredness, a help string, and a default value. We then parse the command-line arguments using the parse() method, which may throw a JSimpleArgsException if there are any errors. We catch and handle this exception. Finally, we retrieve the value of the argument using the getValues() method of the parser, and print it to the console.
@@ -63,4 +64,5 @@ For more information, see the [documentation](https://github.com/nick-donovan/js
 
 ### License
 jSimpleArgs is licensed under the GPL version 3 or later. See the [LICENSE](https://github.com/nick-donovan/jsimpleargs/blob/main/LICENSE) file for more information.
+
 
