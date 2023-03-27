@@ -174,6 +174,10 @@ class Parser {
    * @return the {@code Argument} object associated with the given name
    */
   public Argument getArgument(String name) {
+    if (name == null) {
+      return null;
+    }
+
     // Replace hyphens if present, the program doesn't expect them.
     name = name.replaceAll("^-{0,2}", "");
 
