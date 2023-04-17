@@ -251,7 +251,11 @@ class Parser {
   private void checkRequiredArgs() throws IllegalArgumentUsageException {
     for (Argument argument : this.getArguments()) {
       if (argument.getRequired() && !argument.isPresent()) {
-        throw new IllegalArgumentUsageException(MISSING_REQUIRED_ARGUMENT_MESSAGE + argument);
+        if (argument.getDefaultValue().isEmpty()) {
+          throw new IllegalArgumentUsageException(MISSING_REQUIRED_ARGUMENT_MESSAGE + argument);
+        } else {
+          argument.getValuesUnprotected().add(argument.getDefaultValue());
+        }
       }
     }
   }
@@ -263,10 +267,10 @@ class Parser {
    * the help message, and whether a single use argument has been specified twice. If any of these conditions are true,
    * the method throws an exception with a corresponding message. </p>
    *
-   * @param argument   the {@code Argument} object to validate
-   * @param args       the list of command line arguments
-   * @param arg        the current command line argument being processed
-   * @param i          the current index of the argument being processed
+   * @param argument the {@code Argument} object to validate
+   * @param args     the list of command line arguments
+   * @param arg      the current command line argument being processed
+   * @param i        the current index of the argument being processed
    * @return {@code true} if help for the argument is requested, {@code false} otherwise
    * @throws UnknownArgumentException      if an unrecognized argument is encountered
    * @throws IllegalArgumentUsageException if an argument is used incorrectly
@@ -428,11 +432,7 @@ class Parser {
     List<String> values = argument.getValuesUnprotected();
     if (argument.getHasValue()) {
       if (values.isEmpty()) {
-        if (argument.getDefaultValue().isEmpty()) {
-          throw new IllegalValueException(MISSING_ARGUMENT_VALUE_MESSAGE + arg);
-        } else {
-          values.add(argument.getDefaultValue());
-        }
+        throw new IllegalValueException(MISSING_ARGUMENT_VALUE_MESSAGE + arg);
       }
       if (argument.getSingleArg() && values.size() > 1) {
         throw new IllegalValueException(TOO_MANY_VALUES_MESSAGE + arg + "=" + values);

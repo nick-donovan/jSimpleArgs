@@ -5,6 +5,7 @@ build/
 logs/
 src/test/
 gradle-app.setting
+gradle.properties
 .gradle/
 **/build/
 out/
@@ -15,3 +16,4 @@ out/
 src/main/resources/
 src/**/.gitignore
 notes
+scrap/
