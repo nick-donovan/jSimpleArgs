@@ -19,20 +19,41 @@
 
 package dev.nicholasdonovan.jsimpleargs.exceptions;
 
+/**
+ * Indicates that an argument's value(s) are invalid, such as missing argument value, too many values, or values not allowed.
+ */
 public class IllegalValueException extends Exception {
+  /**
+   * Constructs a new IllegalValueException with a default message.
+   */
   public IllegalValueException() {
     super();
   }
 
+  /**
+   * Constructs a new IllegalValueException with a specified message.
+   *
+   * @param message the error message
+   */
   public IllegalValueException(String message) {
     super(message);
-
   }
 
+  /**
+   * Constructs a new IllegalValueException with the specified error message and cause.
+   *
+   * @param message the error message
+   * @param cause   the cause of the exception
+   */
   public IllegalValueException(String message, Throwable cause) {
     super(message, cause);
   }
 
+  /**
+   * Constructs a new IllegalValueException with the specific cause.
+   *
+   * @param cause the cause of the exception
+   */
   public IllegalValueException(Throwable cause) {
     super(cause);
   }

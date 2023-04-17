@@ -19,19 +19,41 @@
 
 package dev.nicholasdonovan.jsimpleargs.exceptions;
 
+/**
+ * Indicates that an argument is being called incorrectly.
+ */
 public class InappropriateMethodCallException extends RuntimeException {
+  /**
+   * Constructs a new InappropriateMethodCallException with a default message.
+   */
   public InappropriateMethodCallException() {
     super();
   }
 
+  /**
+   * Constructs a new InappropriateMethodCallException with a specified message.
+   *
+   * @param message the error message
+   */
   public InappropriateMethodCallException(String message) {
     super(message);
   }
 
+  /**
+   * Constructs a new InappropriateMethodCallException with the specified error message and cause.
+   *
+   * @param message the error message
+   * @param cause   the cause of the exception
+   */
   public InappropriateMethodCallException(String message, Throwable cause) {
     super(message, cause);
   }
 
+  /**
+   * Constructs a new InappropriateMethodCallException with the specific cause.
+   *
+   * @param cause the cause of the exception
+   */
   public InappropriateMethodCallException(Throwable cause) {
     super(cause);
   }

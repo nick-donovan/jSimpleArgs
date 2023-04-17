@@ -19,19 +19,42 @@
 
 package dev.nicholasdonovan.jsimpleargs.exceptions;
 
+/**
+ * Indicates that an argument name is invalid in some way such as a null argument name was provided, an attempt at
+ * retrieving the argument was not finished, or there are invalid characters in the argument name.
+ */
 public class InvalidArgumentNameException extends Exception {
+  /**
+   * Constructs a new InvalidArgumentNameException with a default message.
+   */
   public InvalidArgumentNameException() {
     super();
   }
 
+  /**
+   * Constructs a new InvalidArgumentNameException with a specified message.
+   *
+   * @param message the error message
+   */
   public InvalidArgumentNameException(String message) {
     super(message);
   }
 
+  /**
+   * Constructs a new InvalidArgumentNameException with the specified error message and cause.
+   *
+   * @param message the error message
+   * @param cause   the cause of the exception
+   */
   public InvalidArgumentNameException(String message, Throwable cause) {
     super(message, cause);
   }
 
+  /**
+   * Constructs a new InvalidArgumentNameException with the specific cause.
+   *
+   * @param cause the cause of the exception
+   */
   public InvalidArgumentNameException(Throwable cause) {
     super(cause);
   }

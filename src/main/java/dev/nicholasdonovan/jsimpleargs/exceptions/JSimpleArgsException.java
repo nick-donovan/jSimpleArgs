@@ -15,24 +15,50 @@
  * <p>
  * You should have received a copy of the GNU General Public License
  * along with jSimpleArgs. If not, see <http://www.gnu.org/licenses/>.
+ * <p>
+ * A generic exception for the library and can act as a wrapper exception class for easy handling. All other exceptions
+ * should throw to a JSimpleArgsException to limit the need for multiple catches or throw declarations.
  */
+
 
 package dev.nicholasdonovan.jsimpleargs.exceptions;
 
+/**
+ * A generic exception for the library and can act as a wrapper exception class for easy handling. All other exceptions
+ * should throw to a JSimpleArgsException to limit the need for multiple catches or throw declarations.
+ */
 public class JSimpleArgsException extends Exception {
+  /**
+   * Constructs a new JSimpleArgsException with a default message.
+   */
   public JSimpleArgsException() {
     super();
   }
 
+  /**
+   * Constructs a new JSimpleArgsException with a specified message.
+   *
+   * @param message the error message
+   */
   public JSimpleArgsException(String message) {
     super(message);
-
   }
 
+  /**
+   * Constructs a new JSimpleArgsException with the specified error message and cause.
+   *
+   * @param message the error message
+   * @param cause   the cause of the exception
+   */
   public JSimpleArgsException(String message, Throwable cause) {
     super(message, cause);
   }
 
+  /**
+   * Constructs a new JSimpleArgsException with the specific cause.
+   *
+   * @param cause the cause of the exception
+   */
   public JSimpleArgsException(Throwable cause) {
     super(cause);
   }

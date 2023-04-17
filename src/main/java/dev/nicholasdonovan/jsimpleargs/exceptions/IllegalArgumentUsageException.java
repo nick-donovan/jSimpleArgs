@@ -19,20 +19,41 @@
 
 package dev.nicholasdonovan.jsimpleargs.exceptions;
 
+/**
+ * Indicates that an argument is being used incorrectly in some way, it's missing, or an attempted duplicate.
+ */
 public class IllegalArgumentUsageException extends Exception {
+  /**
+   * Constructs a new IllegalArgumentUsageException with a default message.
+   */
   public IllegalArgumentUsageException() {
     super();
   }
 
+  /**
+   * Constructs a new IllegalArgumentUsageException with a specified message.
+   *
+   * @param message the error message
+   */
   public IllegalArgumentUsageException(String message) {
     super(message);
-
   }
 
+  /**
+   * Constructs a new IllegalArgumentUsageException with the specified error message and cause.
+   *
+   * @param message the error message
+   * @param cause   the cause of the exception
+   */
   public IllegalArgumentUsageException(String message, Throwable cause) {
     super(message, cause);
   }
 
+  /**
+   * Constructs a new IllegalArgumentUsageException with the specific cause.
+   *
+   * @param cause the cause of the exception
+   */
   public IllegalArgumentUsageException(Throwable cause) {
     super(cause);
   }

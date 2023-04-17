@@ -19,20 +19,41 @@
 
 package dev.nicholasdonovan.jsimpleargs.exceptions;
 
+/**
+ * Indicates that the parser came across an unknown argument during parsing.
+ */
 public class UnknownArgumentException extends Exception {
+  /**
+   * Constructs a new UnknownArgumentException with a default message.
+   */
   public UnknownArgumentException() {
     super();
   }
 
+  /**
+   * Constructs a new UnknownArgumentException with a specified message.
+   *
+   * @param message the error message
+   */
   public UnknownArgumentException(String message) {
     super(message);
-
   }
 
+  /**
+   * Constructs a new UnknownArgumentException with the specified error message and cause.
+   *
+   * @param message the error message
+   * @param cause   the cause of the exception
+   */
   public UnknownArgumentException(String message, Throwable cause) {
     super(message, cause);
   }
 
+  /**
+   * Constructs a new UnknownArgumentException with the specific cause.
+   *
+   * @param cause the cause of the exception
+   */
   public UnknownArgumentException(Throwable cause) {
     super(cause);
   }
