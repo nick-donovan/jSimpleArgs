@@ -2,7 +2,7 @@ plugins {
     id 'java'
 }
 
-group 'dev.nicholasdonovan.jSimpleArg'
+group 'dev.nicholasdonovan.jsimpleargs'
 version '1.0.2'
 
 repositories {
