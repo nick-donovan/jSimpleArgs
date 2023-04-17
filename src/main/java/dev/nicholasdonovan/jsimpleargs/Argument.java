@@ -22,6 +22,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * <p>Represents a command line argument with various properties. An instance of this class represents a command line argument that can be passed
+ * to a program. The argument can have a short name and a long name, a description, and various optional properties.
+ * The properties include whether the argument accepts a single or multiple values, whether the argument has a value, whether the argument is
+ * required, and whether the argument is present. Additionally, the argument can have a default value and a help message.</p>
+ * <p> To create an instance of this class, pass in the short name, long name, and description of the argument. Then, set various properties of the
+ * argument using the setter methods.</p>
+ */
 public class Argument {
   /**
    * Short name of the argument.
