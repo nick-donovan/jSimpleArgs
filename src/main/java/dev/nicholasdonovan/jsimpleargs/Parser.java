@@ -23,475 +23,448 @@ import dev.nicholasdonovan.jsimpleargs.exceptions.*;
 import java.util.*;
 
 /**
- * <p>Responsible for parsing the command line arguments passed to the application. After arguments are created, arguments are passed to the {@code
- * Parser} class via its {@code parse} method. Then will validate the argument names and values, and populate the {@code Argument} objects with any
+ * <p>Responsible for parsing the command line arguments passed to the application. After arguments are created,
+ * arguments are passed to the {@code
+ * Parser} class via its {@code parse} method. Then will validate the argument names and values, and populate the
+ * {@code Argument} objects with any
  * values that were passed on the command line. Validation is summarized as so:</p>
  * <ol>
  *   <li>An argument is found and parsed in the user-provided args.</li>
  *   <li>Arguments are then validated using parameters provided by the programmer during creation.</li>
  *   <li>Once validated, if the argument has values, the values are parsed and then validated.</li>
- *   <li>After the values are parsed and added, the parse method will check to ensure all required args were provided</li>
+ *   <li>After the values are parsed and added, the parse method will check to ensure all required args were
+ *   provided</li>
  *   <li>If all validations are passed, the program will have access to the arguments and values</li>
  * </ol>
  * <p>If at any stage, program help or argument help is requested it will be printed (help can be disabled).</p>
  * <p>If an error is detected the methods will throw specific exceptions to the
- * {@link JSimpleArgsException JSimpleArgs} exception for easy handling.</p>
+ * {@link InvalidInputException JSimpleArgs} exception for easy handling.</p>
  */
 class Parser {
-  /**
-   * Determines whether leading and trailing whitespace should be removed from the arguments when parsing.
-   * By default, it is set to {@code false}, meaning that the input will not be trimmed.
-   */
-  private boolean trimArgs = false;
+  private final Map<String, Argument> shortNameToArgument = new HashMap<>();
+  private final Map<String, Argument> nameToArgument = new HashMap<>();
 
-  /**
-   * A map of argument short names to their respective {@code Argument} objects.
-   * The {@code Argument} objects contain information about the argument such as its name, description, and values.
-   *
-   * @see Argument
-   */
-  private final Map<String, Argument> argumentShortNames = new HashMap<>();
-  /**
-   * A map of argument long names to their respective {@code Argument} objects.
-   * The {@code Argument} objects contain information about the argument such as its name, description, and values.
-   *
-   * @see Argument
-   */
-  private final Map<String, Argument> argumentLongNames = new HashMap<>();
+  private boolean programHelpRequested = false;
+  private boolean argumentHelpRequested = false;
+  private Argument requestedHelpArgument;
 
   /** Error message constants used in argument parsing. */
-  private static final String UNRECOGNIZED_ARGUMENT_MESSAGE = "Unrecognized argument provided: ";
-  private static final String TOO_MANY_VALUES_MESSAGE = "Argument allowed to only have one value: ";
-  private static final String MISSING_REQUIRED_ARGUMENT_MESSAGE = "Argument is required but not specified: ";
-  private static final String VALUE_NOT_ALLOWED_MESSAGE = "Argument may not have a value: ";
-  private static final String SINGLE_ARG_SPECIFIED_TWICE_MESSAGE = "Argument only allowed to be specified once: ";
-  private static final String MISSING_ARGUMENT_VALUE_MESSAGE = "Argument requires a value: ";
-  private static final String DUPLICATE_ARGUMENT_MESSAGE = "This argument is a duplicate of another: ";
-  private static final String INVALID_ARGUMENT_NAME_MESSAGE = "Argument names must contain letters, numbers, or " + "dashes: ";
-  private static final String NULL_ARGS_MESSAGE = "Null args were passed to the Parser parse method.";
+  private static final String UNRECOGNIZED_ARGUMENT_MESSAGE = "Unrecognized argument provided: %s";
+  private static final String TOO_MANY_VALUES_MESSAGE = "Argument %s allowed to only have one value.";
+  private static final String MISSING_REQUIRED_ARGUMENT = "Argument %s is required but not specified.";
+  private static final String ARGUMENT_DOES_NOT_HAVE_VALUE_MESSAGE = "Argument %s may not have a value but was " +
+                                                                     "assigned: %s";
+  private static final String ARGUMENT_MISSING_REQUIRED_VALUE_MESSAGE = "Argument %s requires a value.";
 
-
-  /* ********** Protected Methods *************** */
 
   /**
-   * Checks whether an argument name matches either a short or long name.
+   * Parses the command line items array into a list of separate arguments and values, checks if all required arguments
+   * are present, then adds and validates values (if needed) are present.
    *
-   * @param name the argument name to check
-   * @return {@code true} if the name matches either a short or long name; {@code false} otherwise
+   * @param commandLineItems the array of command-line arguments
+   * @throws InvalidInputException if there is an error during parsing, such as illegal argument usage, unknown
+   *                               argument, or illegal value
    */
-  public boolean argumentNamesMatch(String name) {
-    return argumentLongNames.containsKey(name) || argumentShortNames.containsKey(name);
+  public void parse(String[] commandLineItems) throws InvalidInputException {
+    List<String> items = parseItemsToList(commandLineItems);
+
+    if (isHelpEnabled() && isHelpRequested()) return;
+
+    markArgumentsAsPresent(items);
+    checkForRequiredArgs();
+    parseValues(items);
+    checkForRequiredValues();
   }
 
-  /**
-   * Validates an argument name to ensure it only contains alphanumeric characters or hyphens.
-   *
-   * @param name the argument name to validate
-   * @throws InvalidArgumentNameException if the name contains characters other than alphanumeric characters or hyphens
-   */
-  public void validateName(String name) throws InvalidArgumentNameException {
-    if (name == null || !name.matches("^[a-zA-Z0-9-]+$")) {
-      throw new InvalidArgumentNameException(INVALID_ARGUMENT_NAME_MESSAGE + name);
+  /** Add command line items to list */
+  private List<String> parseItemsToList(String[] argsArray) {
+    List<String> items = new ArrayList<>();
+    for (int i = 0; i < argsArray.length; ++i) {
+      String item = argsArray[i];
+      parseItem(items, item, i);
+    }
+    return items;
+  }
+
+  /** Parse and add items(s) to the list */
+  private void parseItem(List<String> items, String item, int i) {
+    if (isArgument(item)) {
+      items.add(item);
+    } else if (isHelp(item)) {
+      setHelpRequested(items, i);
+    } else if (isArgumentAssigned(item)) {
+      addAssignedArguments(item, items);
+    } else if (isPotentiallyConcatenated(item)) {
+      addConcatenatedArguments(item, items);
+    } else {
+      items.add(item);
     }
   }
 
-  /**
-   * Checks whether there are any duplicate arguments with the same short or long name.
-   *
-   * @param shortName the short name of the argument to check for duplicates
-   * @param longName  the long name of the argument to check for duplicates
-   * @throws IllegalArgumentUsageException if there is already an argument with the same short or long name
-   */
-  public void checkDuplicateArguments(String shortName, String longName) throws IllegalArgumentUsageException {
-    if (this.argumentNamesMatch(shortName) || this.argumentNamesMatch(longName)) {
-      throw new IllegalArgumentUsageException(DUPLICATE_ARGUMENT_MESSAGE + "-" + shortName + " --" + longName);
+  /** Returns true if the given name is an argument name */
+  boolean isArgument(String name) {
+    return isInPrimaryArgumentMap(name) || isInShortArgumentMap(name);
+  }
+
+  /** Returns true if the name is a key in the primary {@code nameToArgument} map */
+  private boolean isInPrimaryArgumentMap(String name) {
+    return this.nameToArgument.containsKey(name);
+  }
+
+  /** Returns true if the name is a key in the {@code shortNameToArgument} map */
+  private boolean isInShortArgumentMap(String subArg) {
+    return this.shortNameToArgument.containsKey(subArg);
+  }
+
+  /** Returns true if the passed string is a help request */
+  private boolean isHelp(String item) {
+    return item.equals("-h") || item.equals("--help");
+  }
+
+  /** Sets the appropriate help flags whenever help is requested by the user */
+  private void setHelpRequested(List<String> args, int i) {
+    if (isArgumentHelp(args, i)) {
+      requestHelpForArgument(args, i);
+    } else {
+      requestHelpForProgram();
     }
   }
 
-  /**
-   * Sets the {@code trimInput} flag to {@code true}, indicating that leading and trailing whitespace should be trimmed
-   * from arguments.
-   */
-  public void trimArgs() {
-    this.trimArgs = true;
+  /** Returns true if the last item in the list is an argument */
+  private boolean isArgumentHelp(List<String> args, int i) {
+    return args.size() > 1 && i > 0 && isArgument(args.get(i - 1));
+  }
+
+  /** Sets the proper help flag and argument pointer if help's requested for an argument */
+  private void requestHelpForArgument(List<String> args, int i) {
+    argumentHelpRequested = true;
+    requestedHelpArgument = getArgument(args.get(i - 1));
+    requestedHelpArgument.setHelpRequestedTrue();
+  }
+
+  /** Sets the proper help flag to signal program help was requested */
+  private void requestHelpForProgram() {
+    programHelpRequested = true;
   }
 
   /**
-   * Parses the command-line arguments and populates the fields of the given {@code JSimpleArgs} object accordingly.
-   * <p> The method first creates a mutable list of strings called {@code args} using the contents of the {@code argsArray}
-   * parameter. If the list is not empty, the first argument is a help flag, and the {@code isHelpEnabled} flag in the
-   * {@code jSimpleArgs} parameter is set to true, the method calls the {@code showHelp} method of the {@code jSimpleArgs}
-   * object and returns from the method to signal help was requested. </p>
-   * <p> Next, the method calls the {@code parseArguments} method to parse the arguments in the {@code args} list and
-   * the {@code checkRequiredArgs} method to check if all required arguments are present. If any of these methods throw
-   * an exception of type {@code IllegalArgumentUsageException}, {@code UnknownArgumentException}, or {@code IllegalValueException},
-   * the method catches the exception and throws a {@code JSimpleArgsException} with the caught exception as its cause.</p>
-   * <p> Finally, the method calls the {@code isArgHelpRequested} method with the {@code jSimpleArgs} parameter to check
-   * if the help flag was requested for an argument. </p>
+   * Returns an {@code Argument} object based on the provided name, if the name is not found a {@link NullArgument}
+   * object is returned.
    *
-   * @param argsArray   the array of command-line arguments
-   * @param jSimpleArgs the object of type {@code JSimpleArgs} used for signaling help functions.
-   * @throws JSimpleArgsException if there is an error during parsing, such as illegal argument usage, unknown argument, or illegal value
-   */
-  public void parse(String[] argsArray, JSimpleArgs jSimpleArgs) throws JSimpleArgsException {
-    // Check if argsArray is null, can cause NullPointerException if we don't.
-    if (argsArray == null) {
-      throw new JSimpleArgsException(NULL_ARGS_MESSAGE);
-    }
-
-    // Convert argsArray to List for easy manipulation.
-    List<String> args = new ArrayList<>(Arrays.asList(argsArray));
-
-    // If the first arg is help.
-    if (!args.isEmpty() && isHelp(args.get(0)) && jSimpleArgs.isHelpEnabled()) {
-      jSimpleArgs.showHelp();
-      return;
-    }
-
-    // Parse arguments, their associated values, and validate both.
-    try {
-      parseArguments(args);
-
-      // Check if argument help is requested.
-      if (isArgHelpRequested(jSimpleArgs)) return;
-      checkRequiredArgs();
-    } catch (IllegalArgumentUsageException | UnknownArgumentException | IllegalValueException e) {
-      throw new JSimpleArgsException(e);
-    }
-
-    // Check if argument help is requested.
-    isArgHelpRequested(jSimpleArgs);
-  }
-
-  /**
-   * Returns the {@code Argument} object associated with the given name.
-   * <p> The method first checks if there is an {@code Argument} object associated with the given {@code name} as a long
-   * name. If an {@code Argument} object is found, it is returned. Otherwise, the method checks if there is an {@code Argument}
-   * object associated with the given {@code name} as a short name. If an {@code Argument} object is found, it is returned.
-   * If there is no {@code Argument} object associated with the given {@code name}, the method returns null.</p>
-   *
-   * @param name the long or short name of the {@code Argument} object to retrieve
-   * @return the {@code Argument} object associated with the given name
+   * @param name the name of the argument
+   * @return an {@code Argument} object represented by the name
    */
   public Argument getArgument(String name) {
-    if (name == null) {
-      return null;
+    Argument arg;
+    if ((arg = this.nameToArgument.get(name)) == null) {
+      arg = this.shortNameToArgument.get(name);
     }
-
-    // Replace hyphens if present, the program doesn't expect them.
-    name = name.replaceAll("^-{0,2}", "");
-
-    Argument argument = this.getArgumentLongNames().get(name);
-
-    if (argument == null) {
-      argument = this.getArgumentShortNames().get(name);
+    if (arg == null) {
+      return new NullArgument();
     }
-
-    return argument;
-  }
-
-  /* ********** Private Methods *************** */
-
-  /**
-   * Determines whether the given argument is a help option.
-   * <p> The method checks whether the given {@code arg} string is equal to "-h" or "--help". </p>
-   *
-   * @param arg the argument to check
-   * @return {@code true} if the argument is a help option, {@code false} otherwise
-   */
-  private boolean isHelp(String arg) {
-    return "-h".equals(arg) || "--help".equals(arg);
-  }
-
-  /**
-   * Parses the list of command line arguments and sets the corresponding {@code Argument} values.
-   * <p>The method iterates through each argument in the given {@code args} list, and if an argument is a valid command
-   * line argument, it sets the corresponding {@code Argument} object's value.</p>
-   * <p> The method also performs validation on the arguments to ensure that they are valid and specified correctly. </p>
-   *
-   * @param args the list of command line arguments to parse
-   * @throws UnknownArgumentException      if an unrecognized argument is encountered
-   * @throws IllegalArgumentUsageException if an argument is used incorrectly
-   * @throws IllegalValueException         if an argument value is invalid
-   */
-  private void parseArguments(List<String> args) throws UnknownArgumentException, IllegalArgumentUsageException, IllegalValueException {
-    // Iterate through args.
-    for (int i = 0; i < args.size(); ++i) {
-      String arg = args.get(i);
-      // If arg is an argument, clean, retrieve, then process.
-      if (isArgument(arg)) {
-        arg = prepArg(arg);
-        Argument argument = getArgument(arg);
-
-        // If the argument wasn't found, check if it's empty, assigned (-b=bacon), or concatenated (-blt), if the
-        // latter two are true, they're seperated and added to the list
-        if (argument == null && (arg.isEmpty() || argIsAssigned(arg, args, i) || argIsConcat(arg, args, i))) {
-          continue;
-        }
-
-        // Performs validation and checks if help was requested. Returns if help requested.
-        if (validateArgumentReturnHelp(argument, args, arg, i)) return;
-
-        // Mark argument present, and parse and validate its values (if applicable).
-        argument.setPresentInArg();
-        parseValues(argument, args, i);
-        validateValues(argument, arg);
-      }
-    }
-  }
-
-  /**
-   * Checks whether all required arguments have been specified.
-   * <p> The method iterates through each {@code Argument} object and checks whether it is a required argument. If an
-   * argument is required and has not been specified, an {@code IllegalArgumentUsageException} is thrown with a message
-   * indicating which argument is missing. </p>
-   *
-   * @throws IllegalArgumentUsageException if a required argument is missing
-   */
-  private void checkRequiredArgs() throws IllegalArgumentUsageException {
-    for (Argument argument : this.getArguments()) {
-      if (argument.getRequired() && !argument.isPresent()) {
-        if (argument.getDefaultValue().isEmpty()) {
-          throw new IllegalArgumentUsageException(MISSING_REQUIRED_ARGUMENT_MESSAGE + argument);
-        } else {
-          argument.getValuesUnprotected().add(argument.getDefaultValue());
-        }
-      }
-    }
-  }
-
-
-  /**
-   * Validates the given {@code Argument} object and ensures that it is used correctly.
-   * <p> The method checks whether the {@code Argument} object is null, whether the argument is being used to display
-   * the help message, and whether a single use argument has been specified twice. If any of these conditions are true,
-   * the method throws an exception with a corresponding message. </p>
-   *
-   * @param argument the {@code Argument} object to validate
-   * @param args     the list of command line arguments
-   * @param arg      the current command line argument being processed
-   * @param i        the current index of the argument being processed
-   * @return {@code true} if help for the argument is requested, {@code false} otherwise
-   * @throws UnknownArgumentException      if an unrecognized argument is encountered
-   * @throws IllegalArgumentUsageException if an argument is used incorrectly
-   */
-  private boolean validateArgumentReturnHelp(Argument argument, List<String> args, String arg, int i) throws UnknownArgumentException,
-      IllegalArgumentUsageException {
-    if (argument == null) {
-      throw new UnknownArgumentException(UNRECOGNIZED_ARGUMENT_MESSAGE + arg);
-    } else if (isNotLastElement(i, args) && isHelp(args.get(i + 1))) {
-      argument.showHelp();
-      return true;
-    } else if (argument.isPresent() && argument.getSingleArg()) {
-      throw new IllegalArgumentUsageException(SINGLE_ARG_SPECIFIED_TWICE_MESSAGE + arg);
-    }
-    return false;
-  }
-
-  /**
-   * Checks whether the given argument is a valid argument flag. A valid argument flag can either be a short flag
-   * (a single dash) or a long flag (two dashes), each followed by alphanumeric characters and dashes.
-   *
-   * @param arg the argument to check.
-   * @return {@code true} if the argument is a valid argument flag, {@code false} otherwise.
-   */
-  private boolean isArgument(String arg) {
-    return arg != null && arg.matches("^-?-[a-zA-Z0-9-]*$");
-  }
-
-  /**
-   * Prepares the {@code arg} string for processing by trimming if {@code trimInput} is {@code true}, and removing up
-   * to two of the first hyphens.
-   *
-   * @param arg arg to be processed
-   * @return processed arg
-   */
-  private String prepArg(String arg) {
-    if (this.trimArgs) {
-      arg = arg.trim();
-    }
-    arg = arg.replaceAll("^-{0,2}", "");
     return arg;
   }
 
-  /**
-   * Determines if an argument has an assigned value and separates it into two separate strings, adding them to the given
-   * {@code args} list at positions i+1 and i+2 if true.
-   *
-   * @param arg  the argument to check
-   * @param args the list of command-line arguments
-   * @param i    the index of the argument in the list
-   * @return true if the argument is an assigned value argument, false otherwise
-   */
-  private boolean argIsAssigned(String arg, List<String> args, int i) {
+  /** Checks if the argument has an assigned value (ex: --input=./file) */
+  private boolean isArgumentAssigned(String arg) {
     String[] splitArg = arg.split("=");
-    if (splitArg.length == 2 && !splitArg[0].isEmpty() && !splitArg[1].isEmpty()) {
-      args.add(i + 1, "-" + splitArg[0]);
-      args.add(i + 2, splitArg[1]);
-      return true;
-    }
-    return false;
+    return splitArg.length == 2 && isArgument(splitArg[0]) && !splitArg[1].isEmpty();
+  }
+
+  /** Splits an assigned argument and adds the two values into the list (ex: --input=./file). */
+  private void addAssignedArguments(String arg, List<String> args) {
+    String[] splitArg = arg.split("=");
+    args.add(splitArg[0]);
+    args.add(splitArg[1]);
+  }
+
+  /** Returns true if the argument provided is potentially concatenated */
+  private boolean isPotentiallyConcatenated(String arg) {
+    return arg.startsWith("-") && !arg.startsWith("--") && arg.length() > 2;
   }
 
   /**
    * Determines if an argument is a concatenation of several short arguments and adds each short argument as a separate
-   * string to the given {@code args} list at positions i+1 to i+n if true.
-   *
-   * @param arg  the argument to check
-   * @param args the list of command-line arguments
-   * @param i    the index of the argument in the list
-   * @return true if the argument is a concatenation of short arguments, false otherwise
+   * string to the given {@code items} list.
    */
-  private boolean argIsConcat(String arg, List<String> args, int i) {
-    // Add potential arguments here, until either it's not concat or `arg` is empty
+  private void addConcatenatedArguments(String item, List<String> items) {
+    // Hold potential arguments until either it's not concat or `potentialConcat` is empty
     List<String> potentialArguments = new ArrayList<>();
 
-    // Iterate through `arg` to find possible arguments. Removing them as they're found.
-    int last = 1;
-    while (last <= arg.length()) {
-      String sub = arg.substring(0, last);
-      if (this.argumentShortNames.containsKey(sub)) {
-        arg = arg.substring(last);
-        potentialArguments.add("-" + sub);
-        last = 0;
-      }
-      if (arg.length() == 0) {
-        break;
-      }
-      ++last;
-    }
+    // Concatenated and assigned are allowed, split item by '='
+    String[] itemArr = item.split("=");
 
-    // Add all the arguments to the args list then return true, it was concatenated.
-    if (arg.isEmpty()) {
-      args.addAll(i + 1, potentialArguments);
+    // Save item
+    String potentialConcat = itemArr[0];
+
+    // Remove leading hyphen
+    potentialConcat = potentialConcat.substring(1);
+
+    // Remove arguments from string
+    potentialConcat = removeArgumentsFromString(potentialArguments, potentialConcat);
+
+    // If concatenated, add all to list
+    if (isConcatenated(potentialConcat)) {
+      items.addAll(potentialArguments);
+      if (isAssignedValueWithConcatenation(itemArr)) {
+        items.add(itemArr[1]);
+      }
+    }
+  }
+
+  /** Remove all arguments from potential concatenation */
+  private String removeArgumentsFromString(List<String> potentialArguments, String potentialConcat) {
+    // Start with first char
+    int index = 1;
+
+    while (!isEndOfString(potentialConcat, index)) {
+
+      // Run through combinations of characters
+      String potentialArg = "-" + potentialConcat.substring(0, index);
+
+      if (isInShortArgumentMap(potentialArg)) {
+        // Remove potentialArg from string
+        potentialConcat = potentialConcat.substring(index);
+
+        // Add to potentials
+        potentialArguments.add(potentialArg);
+
+        // Reset index
+        index = 0;
+      }
+
+      ++index;
+    }
+    return potentialConcat;
+  }
+
+  /** If all arguments are removed, it's concatenated */
+  private boolean isConcatenated(String potentialConcat) {
+    return potentialConcat.isEmpty();
+  }
+
+  /** Returns true if an assigned value is detected with the concatenated arguments */
+  private boolean isAssignedValueWithConcatenation(String[] itemArr) {
+    return itemArr.length > 1 && !itemArr[1].isEmpty();
+  }
+
+  /** Returns true if end of string */
+  private boolean isEndOfString(String arg, int index) {
+    return index > arg.length();
+  }
+
+  /** Returns true if help is enabled */
+  private boolean isHelpEnabled() {
+    return JSimpleArgs.isHelpEnabled();
+  }
+
+  /** Returns true if help is requested */
+  private boolean isHelpRequested() {
+    return isProgramHelpRequested() || isArgumentHelpRequested();
+  }
+
+  /** Returns true if program help is requested */
+  boolean isProgramHelpRequested() {
+    return this.programHelpRequested;
+  }
+
+  /** Returns true if argument help is requested */
+  boolean isArgumentHelpRequested() {
+    return this.argumentHelpRequested;
+  }
+
+  /** Marks parsed arguments as present */
+  private void markArgumentsAsPresent(List<String> args) {
+    for (String argument : args) {
+      getArgument(argument).setPresentTrue();
+    }
+  }
+
+  /** Checks for arguments marked as required, if they are not in the CLI an InvalidInputException is thrown */
+  private void checkForRequiredArgs() throws InvalidInputException {
+    for (Argument arg : getArguments()) {
+      if (arg.isRequired() && !arg.isPresent()) {
+        throw new InvalidInputException(
+            new MissingRequiredArgumentException(String.format(MISSING_REQUIRED_ARGUMENT, arg.getName()))
+        );
+      }
+    }
+  }
+
+  /** Parse the argument value from the list */
+  private void parseValues(List<String> args) throws InvalidInputException {
+    try {
+      parseArgumentValues(args);
+    } catch (UnknownArgumentException | IllegalValueException e) {
+      throw new InvalidInputException(e);
+    }
+  }
+
+  /** Parses and adds argument values from the list */
+  private void parseArgumentValues(List<String> args) throws UnknownArgumentException, IllegalValueException {
+    Argument argument;
+    int i = 0;
+
+    while (!isEndOfList(args, i)) {
+      String current = args.get(i);
+      argument = getArgument(current);
+
+      if (argument.isNull()) {
+        throw new UnknownArgumentException(String.format(UNRECOGNIZED_ARGUMENT_MESSAGE, current));
+      }
+
+      if (argument.isHasValue()) {
+        if (tryToAddValue(argument, args, i)) ++i;
+      } else if (isNextElementInList(args, i)) {
+        verifyNextIsArgument(current, args.get(i + 1));
+      }
+
+      ++i;
+    }
+  }
+
+  /**
+   * Check for and add value (if one is assigned). If the argument requires a value, has a default value, and one is
+   * not assigned in the command line, the default value is assigned to the argument
+   */
+  private boolean tryToAddValue(Argument argument, List<String> args, int i) throws IllegalValueException {
+    if (isValueInCommandLine(args, i)) {
+      addValueToArgument(argument, args, i);
       return true;
+    } else if (isDefaultValuePresent(argument)) {
+      argument.addValue(argument.getDefaultValue());
     }
     return false;
   }
 
-  /**
-   * Determines if the given index i is not the index of the last element in the list.
-   *
-   * @param i    the index to check
-   * @param list the list to check
-   * @param <T>  the type of elements in the list
-   * @return true if the index is not the index of the last element in the list, false otherwise
-   */
-  private <T> boolean isNotLastElement(int i, List<T> list) {
-    return i != list.size() - 1;
+  /** Adds value to argument if the next item in the list is not an argument. */
+  private void addValueToArgument(Argument argument, List<String> args, int i) throws IllegalValueException {
+    if (isTooManyValues(argument)) {
+      throw new IllegalValueException(String.format(TOO_MANY_VALUES_MESSAGE, args.get(i)));
+    }
+    argument.addValue(args.get(i + 1));
+  }
+
+  /** Returns true if the argument has a default value */
+  private boolean isDefaultValuePresent(Argument argument) {
+    return !argument.getDefaultValue().isEmpty();
+  }
+
+  /** Returns true if there's a value in command line */
+  private boolean isValueInCommandLine(List<String> args, int i) {
+    return isNextElementInList(args, i) && !isArgument(args.get(i + 1));
+  }
+
+  /** Returns true if the index has reached the end of the list */
+  private <T> boolean isEndOfList(List<T> args, int i) {
+    return i >= args.size();
+  }
+
+  /** Returns true if there's a next element in the list */
+  private boolean isNextElementInList(List<String> args, int i) {
+    return i < args.size() - 1;
+  }
+
+  /** Returns true if the argument is being assigned too many values */
+  private boolean isTooManyValues(Argument argument) {
+    return argument.isSingleValue() && !argument.getValues().isEmpty();
   }
 
   /**
-   * Parses the input values for the given argument, adding them to the argument's list of values.
-   *
-   * @param argument the argument being parsed
-   * @param args     the list of arguments being processed
-   * @param i        the index of the argument in the list
+   * Verifies the next element is an argument, if it's not, the user is either trying to use an unrecognized commmand
+   * or trying to assign a value to an argument that doesn't take one.
    */
-  private void parseValues(Argument argument, List<String> args, int i) {
-    while (args.get(i) != null && isNotLastElement(i, args) && !isArgument(args.get(i + 1))) {
-      String arg = args.get(++i).trim();
-      if (!arg.isEmpty()) {
-        argument.getValuesUnprotected().add(arg);
+  private void verifyNextIsArgument(String current, String next) throws IllegalValueException {
+    if (!isArgument(next)) { // Argument has no value, but value assigned
+      String message = String.format(ARGUMENT_DOES_NOT_HAVE_VALUE_MESSAGE, current, next);
+      if (isPotentialKeywordArgument(next)) {
+        message = String.format(UNRECOGNIZED_ARGUMENT_MESSAGE, next) + " or " + message;
+      }
+      throw new IllegalValueException(message);
+    }
+  }
+
+  /** Returns true if the string starts with a hyphen, meaning it could be intended as a keyword argument */
+  private boolean isPotentialKeywordArgument(String next) {
+    return next.startsWith("-");
+  }
+
+  /** Verifies that all the required arguments are present */
+  private void checkForRequiredValues() throws InvalidInputException {
+    for (Argument argument : getArguments()) {
+      if (isArgumentMissingRequiredValue(argument)) {
+        throw new InvalidInputException(String.format(ARGUMENT_MISSING_REQUIRED_VALUE_MESSAGE, argument.getName()));
       }
     }
   }
 
-  /**
-   * Checks whether the help argument is present in the input JSimpleArgs object, and displays the help
-   * information for any argument with the 'showHelp' flag set to true.
-   *
-   * @param jSimpleArgs the JSimpleArgs object being checked
-   */
-  private boolean isArgHelpRequested(JSimpleArgs jSimpleArgs) {
-    for (Argument argument : this.getArguments())
-      if (argument.getShowHelp() && jSimpleArgs.isHelpEnabled()) {
-        jSimpleArgs.showHelp();
-        System.out.println(argument.getHelp());
-        return true;
-      }
-    return false;
+  /** Returns true if an argument requires a value but is missing one. */
+  private static boolean isArgumentMissingRequiredValue(Argument argument) {
+    return argument.isPresent() && argument.getValues().isEmpty() && argument.isRequiresValue();
+  }
+
+  /** Returns a collection of arguments */
+  Collection<Argument> getArguments() {
+    return this.nameToArgument.values();
+  }
+
+  /** Returns the help string of an argument that the user requested help for */
+  String getArgumentHelpString() {
+    return this.requestedHelpArgument.getHelp();
   }
 
   /**
-   * Validates the values of the given argument.
-   * <p> If the argument is expected to have a value, the method checks if the argument has any values, and if not, it
-   * checks if a default value is provided. If there are no values and no default value, the method throws an
-   * {@code IllegalValueException} with an appropriate message. If the argument allows only a single value and multiple
-   * values are provided, it throws an {@code IllegalValueException} with an appropriate message. </p>
+   * Returns a string representation of the parser's arguments
    *
-   * <p> If the argument is not expected to have a value, the method checks if the argument has any values, and if so,
-   * it throws an {@code IllegalValueException} with an appropriate message. </p>
-   *
-   * @param argument the {@code Argument} object whose values are to be validated
-   * @param arg      the argument string whose values are to be validated
-   * @throws IllegalValueException if the argument's values are invalid, such as missing argument value, too many values, or values not allowed
-   * @see Argument
+   * @return a string representation of the arguments
    */
-  private void validateValues(Argument argument, String arg) throws IllegalValueException {
-    List<String> values = argument.getValuesUnprotected();
-    if (argument.getHasValue()) {
-      if (values.isEmpty()) {
-        throw new IllegalValueException(MISSING_ARGUMENT_VALUE_MESSAGE + arg);
-      }
-      if (argument.getSingleArg() && values.size() > 1) {
-        throw new IllegalValueException(TOO_MANY_VALUES_MESSAGE + arg + "=" + values);
-      }
-    } else {
-      if (!values.isEmpty()) {
-        throw new IllegalValueException(VALUE_NOT_ALLOWED_MESSAGE + arg + "=" + values);
+  @Override
+  public String toString() {
+    StringBuilder string = new StringBuilder();
+
+    StringBuilder keywordArgs = buildKeywordArgumentsString();
+    if (!keywordArgs.isEmpty()) {
+      string.append("Keyword Arguments: \n").append(keywordArgs).append("\n");
+    }
+
+    StringBuilder positionalArgs = buildPositionalArgumentsString();
+    if (!positionalArgs.isEmpty()) {
+      string.append("Positional Arguments: \n").append(positionalArgs);
+    }
+
+    return string.toString();
+  }
+
+  /** Return a string builder of keyword arguments */
+  private StringBuilder buildKeywordArgumentsString() {
+    StringBuilder keywordArgs = new StringBuilder();
+    for (Argument arg : getArguments()) {
+      if (arg instanceof KeywordArgument) {
+        keywordArgs.append(arg).append("\n");
       }
     }
+    return keywordArgs;
   }
 
-  /* ********** Public Accessors *************** */
-
-  /**
-   * Returns an unmodifiable view of the argumentShortNames map.
-   *
-   * @return an unmodifiable view of the argumentShortNames map
-   */
-  public Map<String, Argument> getArgumentShortNames() {
-    return Collections.unmodifiableMap(this.argumentShortNames);
+  /** Return a string builder of positional arguments */
+  private StringBuilder buildPositionalArgumentsString() {
+    StringBuilder positionalArgs = new StringBuilder();
+    for (Argument arg : getArguments()) {
+      if (arg instanceof PositionalArgument) {
+        positionalArgs.append(arg).append("\n");
+      }
+    }
+    return positionalArgs;
   }
 
-  /**
-   * Returns an unmodifiable view of the argumentLongNames map.
-   *
-   * @return an unmodifiable view of the argumentLongNames map
-   */
-  public Map<String, Argument> getArgumentLongNames() {
-    return Collections.unmodifiableMap(this.argumentLongNames);
+  /** Adds a keyword argument to the maps */
+  void addKeywordArgument(Argument argument) {
+    this.nameToArgument.put(argument.getName(), argument);
+    this.shortNameToArgument.put(((KeywordArgument) argument).getShortName(), argument);
   }
 
-  /**
-   * Returns an unmodifiable view of the collection of arguments.
-   *
-   * @return an unmodifiable view of the collection of arguments
-   */
-  public Collection<Argument> getArguments() {
-    return Collections.unmodifiableCollection(this.argumentShortNames.values());
-  }
-
-  /* ********** Protected Accessors *************** */
-
-  /**
-   * Returns the argumentShortNames map. This method is unprotected and should only be used by
-   * subclasses.
-   *
-   * @return the argumentShortNames map
-   */
-  protected Map<String, Argument> getArgumentShortNamesUnprotected() {
-    return this.argumentShortNames;
-  }
-
-  /**
-   * Returns the argumentLongNames map. This method is unprotected and should only be used by
-   * subclasses.
-   *
-   * @return the argumentLongNames map
-   */
-  protected Map<String, Argument> getArgumentLongNamesUnprotected() {
-    return this.argumentLongNames;
+  /** Adds a positional argument to the map */
+  void addPositionalArgument(Argument argument) {
+    this.nameToArgument.put(argument.getName(), argument);
   }
 }

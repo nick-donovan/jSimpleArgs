@@ -19,9 +19,7 @@
 
 package dev.nicholasdonovan.jsimpleargs.exceptions;
 
-/**
- * Indicates that the parser came across an unknown argument during parsing.
- */
+/** Indicates that the parser came across an unknown argument during parsing. */
 public class UnknownArgumentException extends Exception {
   /**
    * Constructs a new UnknownArgumentException with a default message.

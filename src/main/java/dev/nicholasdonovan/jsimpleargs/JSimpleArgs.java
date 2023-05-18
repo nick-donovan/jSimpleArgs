@@ -21,183 +21,216 @@ package dev.nicholasdonovan.jsimpleargs;
 
 import dev.nicholasdonovan.jsimpleargs.exceptions.IllegalArgumentUsageException;
 import dev.nicholasdonovan.jsimpleargs.exceptions.InvalidArgumentNameException;
-import dev.nicholasdonovan.jsimpleargs.exceptions.JSimpleArgsException;
+import dev.nicholasdonovan.jsimpleargs.exceptions.InvalidInputException;
+import dev.nicholasdonovan.jsimpleargs.exceptions.InvalidParserUsageException;
 
 /**
- * The interface for the {@code Parser} class and is responsible for creating new command-line arguments with specified options. It uses the {@code
- * Parser} class to perform argument parsing, the results of which are stored Argument objects.
- * The class provides various methods to enable/disable help functions, show help, and set usage messages. It also includes methods for creating
- * new Argument objects with short and long names and a description. Additionally, the JSimpleArgs class provides methods for accessing and
- * manipulating the Argument objects and returning a String representation of the parsed arguments.
+ * The interface for the {@code Parser} class and is responsible for creating new command-line arguments with
+ * specified options. It uses the {@code Parser} class to perform argument parsing, the results of which are stored
+ * Argument objects. The class provides various methods to enable/disable help functions, show help, and set usage
+ * messages. It also includes methods for creating new Argument objects with short and long names and a description.
+ * Additionally, the JSimpleArgs class provides methods for accessing and manipulating the Argument objects and
+ * returning a String representation of the parsed arguments.
  *
  * @see Parser
  * @see Argument
  */
 public class JSimpleArgs {
-  /**
-   * The {@code Parser} object used to parse command-line arguments and update {@code Argument} objects.
-   */
-  private final Parser argParser;
-  /**
-   * The usage string that appears in the help message. This string is empty by default.
-   */
-  private String usage;
+  private final Parser argumentParser;
+  private String programUsage;
+  private String programHelp;
 
-  /**
-   * The usage string that appears in the help message. This string is empty by default.
-   */
-  private String help;
-  /**
-   * A boolean flag indicating whether the help option was requested. This flag is {@code false} by default.
-   */
-  private boolean showHelp = false;
 
-  /**
-   * A boolean flag indicating whether the help option should be disabled. This flag is false by default.
-   */
-  private boolean disableHelp = false;
+  /** A boolean flag indicating whether the help option should be disabled */
+  private static boolean disableHelp = false;
+
 
   /** Error message constants. */
-  private static final String ARGUMENT_NOT_FOUND_MESSAGE = "Argument requested was not found: ";
+  private static final String INVALID_ARGUMENT_NAME = "Argument names must contain letters, numbers, or hyphens: ";
+  private static final String DUPLICATE_ARGUMENT = "This argument is a duplicate of another: ";
+  private static final String NULL_ARGUMENT_FIELD = "New argument fields may not be null";
 
-  /* ********** Public Methods *************** */
-
-  /**
-   * Creates a new instance of JSimpleArgs with an empty usage information and a new instance of the Parser class.
-   */
+  /** Creates a new instance of JSimpleArgs with an empty usage information and a new instance of the Parser class. */
   public JSimpleArgs() {
-    this.argParser = new Parser();
-    this.usage = "";
-    this.help = "";
+    this.argumentParser = new Parser();
+    this.programUsage = "";
+    this.programHelp = "";
   }
 
   /**
-   * Creates a new instance of JSimpleArgs with the specified usage information and a new instance of the Parser class.
-   *
-   * @param usage the usage information for the command line interface
-   */
-  public JSimpleArgs(String usage) {
-    this.argParser = new Parser();
-    if (usage == null) {
-      usage = "";
-    }
-    this.usage = usage;
-    this.help = "";
-  }
-
-  /**
-   * Creates a new argument with the given short name, long name, and description. The short and long names should not
-   * start with any hyphens, as these will be added automatically by the parser. The method returns an object of type
-   * {@code Argument}, which can be further configured with various options.
+   * Create a new keyword argument with the given short name, long name, and description, and returns the newly
+   * created argument object for further customization.
+   * <p>Example: ("-i", "--input", "description")</p>
    *
    * @param shortName   the short name of the argument
    * @param longName    the long name of the argument
    * @param description a description of the argument
    * @return an object of type {@code Argument} representing the newly created argument
-   * @throws JSimpleArgsException if there is an error during argument creation
+   * @throws InvalidParserUsageException if there is an error during argument creation
    */
-  public Argument newArgument(String shortName, String longName, String description) throws JSimpleArgsException {
-    // Check if any of the parameters are null, can cause NullPointerException if this isn't done.
-    if (shortName == null || longName == null || description == null) {
-      throw new JSimpleArgsException(new InvalidArgumentNameException("New argument fields may not be null."));
-    }
-
-    // Replace hyphens if present, the program doesn't expect them.
-    shortName = shortName.replaceAll("^-", "");
-    longName = longName.replaceAll("^-{0,2}", "");
-
+  public Argument newArgument(String shortName, String longName, String description) throws InvalidParserUsageException {
     // Validate names and check duplicates
-    try {
-      this.argParser.validateName(shortName);
-      this.argParser.validateName(longName);
-      this.argParser.checkDuplicateArguments(shortName, longName);
-    } catch (IllegalArgumentUsageException | InvalidArgumentNameException e) {
-      throw new JSimpleArgsException(e);
-    }
+    validateArgumentName(shortName);
+    validateArgumentName(longName);
 
     // Create new argument and reference it in both parser maps.
-    Argument argument = new Argument(shortName, longName, description);
-    this.argParser.getArgumentShortNamesUnprotected().put(shortName, argument);
-    this.argParser.getArgumentLongNamesUnprotected().put(longName, argument);
+    Argument argument = new KeywordArgument(shortName, longName, description);
+    argumentParser.addKeywordArgument(argument);
+
+    // Return the new argument
     return argument;
   }
 
   /**
-   * Returns the {@code Argument} object with the specified name by calling the {@code Parser} class's
-   * {@link Parser#getArgument(String) getArgument}.
+   * Create a new positional argument with the given name and description, and returns the newly created argument
+   * object for further customization.
+   * <p>Example: ("output", "description")</p>
    *
-   * @param name the name of the argument to retrieve
-   * @return the {@code Argument} object with the specified name
-   * @throws JSimpleArgsException if the argument is not found
+   * @param name        the positional name of the argument
+   * @param description a description of the argument
+   * @return an object of type {@code Argument} representing the newly created argument
+   * @throws InvalidParserUsageException if there is an error during argument creation
    */
-  public Argument getArgument(String name) throws JSimpleArgsException {
-    Argument argument = this.argParser.getArgument(name);
-    if (argument == null) {
-      throw new JSimpleArgsException(new InvalidArgumentNameException(ARGUMENT_NOT_FOUND_MESSAGE + name));
+  public Argument newArgument(String name, String description) throws InvalidParserUsageException {
+    // Validate names and check duplicates
+    validateArgumentName(name);
+
+    // Create new argument and reference it in the primary map.
+    Argument argument = new PositionalArgument(name, description);
+    argumentParser.addPositionalArgument(argument);
+
+    // Return the new argument
+    return argument;
+  }
+
+  /** Validates the provided argument name and checks if it's a duplicate. */
+  void validateArgumentName(String name) throws InvalidParserUsageException {
+    try {
+      checkValidName(name);
+      checkIfDuplicateArgument(name);
+    } catch (IllegalArgumentUsageException | InvalidArgumentNameException e) {
+      throw new InvalidParserUsageException(e.getMessage(), e);
     }
-    return argument;
   }
 
   /**
-   * Sets the help flag to true, indicating that help has been requested.
+   * Validates an argument name to ensure it is not null and only contains alphanumeric characters or hyphens.
+   *
+   * @param name the argument name to validate
+   * @throws InvalidArgumentNameException if the name is null or contains non-alphanumeric characters or hyphens
    */
-  public void showHelp() { this.showHelp = true; }
+  private void checkValidName(String name) throws InvalidArgumentNameException {
+    if (name == null) {
+      throw new InvalidArgumentNameException(NULL_ARGUMENT_FIELD);
+    }
+    if (!isAlphaNumOrHyphen(name)) {
+      throw new InvalidArgumentNameException(INVALID_ARGUMENT_NAME + name);
+    }
+  }
+
+  /** Returns true if the string consists of alphanumeric or hyphen characters */
+  private boolean isAlphaNumOrHyphen(String s) {
+    if (s == null) return false;
+    return s.matches("^[a-zA-Z0-9-]+$");
+  }
+
+  /** Throws an IllegalArgumentUsageException exception on duplicate arguments */
+  private void checkIfDuplicateArgument(String name) throws IllegalArgumentUsageException {
+    if (argumentParser.isArgument(name)) {
+      throw new IllegalArgumentUsageException(DUPLICATE_ARGUMENT + name);
+    }
+  }
 
   /**
-   * Sets the {@code Parser} class {@code trimInput} flag to {@code true}, indicating that leading and trailing
-   * whitespace should be trimmed from arguments.
+   * Parses the command line arguments passed to the application using the {@code Parser} class's {@code parse}
+   * function.
    *
+   * @param args the array of command-line arguments
    * @return the {@code JSimpleArgs} object
+   * @throws InvalidInputException if there is an error during parsing, such as illegal argument usage, unknown
+   *                               argument, or illegal value
+   * @see Parser#parse
    */
-  public JSimpleArgs trimArgs() {
-    this.argParser.trimArgs();
+  public JSimpleArgs parse(String[] args) throws InvalidInputException {
+    if (args == null) args = new String[0];
+
+    this.argumentParser.parse(args);
+    checkForAndHandleHelp();
+
     return this;
   }
 
+  /** Checks and performs the appropriate action if help was requested */
+  private void checkForAndHandleHelp() {
+    if (isHelpEnabled() && argumentParser.isProgramHelpRequested()) {
+      printProgramHelp();
+    } else if (isHelpEnabled() && argumentParser.isArgumentHelpRequested()) {
+      System.out.println(argumentParser.getArgumentHelpString());
+      printProgramHelp();
+    }
+  }
+
+  /** Print program usage and help */
+  private void printProgramHelp() {
+    System.out.println(programUsage);
+    System.out.println(programHelp);
+  }
+
   /**
-   * Disables the help functionality.
+   * Disables the automatic help functionality. A help request can still be verified by using the two methods
+   * {@link #isProgramHelpRequested()} and {@link #isArgumentHelpRequested()}
    *
    * @return the {@code JSimpleArgs} object
    */
   public JSimpleArgs disableHelp() {
-    this.disableHelp = true;
+    disableHelp = true;
     return this;
   }
 
   /**
-   * Passes the command line arguments passed to the application to the {@code Parser} class's {@code parse} function.
+   * Returns true if program help has been requested.
    *
-   * @param args the array of command-line arguments
-   * @return the {@code JSimpleArgs} object
-   * @throws JSimpleArgsException if there is an error during parsing, such as illegal argument usage, unknown argument, or illegal value
-   * @see Parser#parse
+   * @return true if requested, else false
    */
-  public JSimpleArgs parse(String[] args) throws JSimpleArgsException {
-    this.argParser.parse(args, this);
-    return this;
+  public boolean isProgramHelpRequested() {
+    return argumentParser.isProgramHelpRequested();
   }
 
-  /* ********** Overridden Methods *************** */
+  /**
+   * Returns true if an argument help has been requested.
+   *
+   * @return true if requested, else false
+   */
+  public boolean isArgumentHelpRequested() {
+    return argumentParser.isArgumentHelpRequested();
+  }
 
   /**
-   * Returns a string representation of the {@code JSimpleArgs} object. The string contains a description of each argument
-   * and its corresponding value(s).
+   * Returns the argument associated with the provided name.
    *
-   * @return a string representation of the {@code JSimpleArgs} object.
+   * @param name the name of the argument (short, long, or positional)
+   * @return the argument object associated with the name
+   */
+  public Argument getArgument(String name) {
+    return this.argumentParser.getArgument(name);
+  }
+
+  /**
+   * Returns a string representation of the {@code JSimpleArgs} object.
+   *
+   * @return a string representation of the {@code JSimpleArgs} object
    */
   @Override
   public String toString() {
     StringBuilder stringBuilder = new StringBuilder();
 
-    for (Argument argument : this.argParser.getArguments()) {
+    for (Argument argument : this.argumentParser.getArguments()) {
       stringBuilder.append(argument);
       stringBuilder.append(argument.getValues());
       stringBuilder.append('\n');
     }
     return stringBuilder.toString();
   }
-
-  /* ********** Public Mutators *************** */
 
   /**
    * Sets the usage string for the {@code JSimpleArgs} object.
@@ -209,7 +242,7 @@ public class JSimpleArgs {
     if (usage == null) {
       usage = "";
     }
-    this.usage = usage;
+    this.programUsage = usage;
     return this;
   }
 
@@ -223,17 +256,18 @@ public class JSimpleArgs {
     if (help == null) {
       help = "";
     }
-    this.help = help;
+    this.programHelp = help;
     return this;
   }
-  /* ********** Public Accessors *************** */
 
   /**
    * Returns the usage string for the {@code JSimpleArgs} object.
    *
    * @return the usage string for the {@code JSimpleArgs} object.
    */
-  public String getUsage() { return this.usage; }
+  public String getUsage() {
+    return this.programUsage;
+  }
 
   /**
    * Returns the help string for the {@code JSimpleArgs} object.
@@ -241,31 +275,15 @@ public class JSimpleArgs {
    * @return the help string for the {@code JSimpleArgs} object.
    */
   public String getHelp() {
-    return help;
+    return this.programHelp;
   }
 
   /**
-   * Returns the usage and help string for the {@code JSimpleArgs} object.
+   * Returns whether the help flag is enabled or disabled.
    *
-   * @return the usage and help string for the {@code JSimpleArgs} object.
+   * @return true if help is enabled, false otherwise
    */
-  public String getUsageHelp() {
-    return String.format("%s%n%s", this.usage, this.help);
-  }
-
-  /**
-   * Returns whether the help flag is enabled or disabled for the {@code JSimpleArgs} object.
-   *
-   * @return {@code true} if the help flag is enabled, {@code false} otherwise.
-   */
-  public boolean isHelpEnabled() { return !this.disableHelp; }
-
-  /**
-   * Returns whether the help flag was requested during parsing of command-line arguments for the {@code JSimpleArgs} object.
-   *
-   * @return {@code true} if the help flag was requested, {@code false} otherwise.
-   */
-  public boolean getShowHelp() {
-    return showHelp;
+  public static boolean isHelpEnabled() {
+    return !disableHelp;
   }
 }

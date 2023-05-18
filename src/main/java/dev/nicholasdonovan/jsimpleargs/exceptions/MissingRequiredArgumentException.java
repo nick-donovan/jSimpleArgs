@@ -15,51 +15,46 @@
  * <p>
  * You should have received a copy of the GNU General Public License
  * along with jSimpleArgs. If not, see <http://www.gnu.org/licenses/>.
- * <p>
- * A generic exception for the library and can act as a wrapper exception class for easy handling. All other exceptions
- * should throw to a JSimpleArgsException to limit the need for multiple catches or throw declarations.
  */
-
 
 package dev.nicholasdonovan.jsimpleargs.exceptions;
 
 /**
- * A generic exception for the library and can act as a wrapper exception class for easy handling. All other exceptions
- * should throw to a JSimpleArgsException to limit the need for multiple catches or throw declarations.
+ * Indicates that an argument is being called incorrectly.
  */
-public class JSimpleArgsException extends Exception {
+public class MissingRequiredArgumentException extends Exception {
   /**
-   * Constructs a new JSimpleArgsException with a default message.
+   * Constructs a new MissingRequiredArgumentException with a default message.
    */
-  public JSimpleArgsException() {
+  public MissingRequiredArgumentException() {
     super();
   }
 
   /**
-   * Constructs a new JSimpleArgsException with a specified message.
+   * Constructs a new MissingRequiredArgumentException with a specified message.
    *
    * @param message the error message
    */
-  public JSimpleArgsException(String message) {
+  public MissingRequiredArgumentException(String message) {
     super(message);
   }
 
   /**
-   * Constructs a new JSimpleArgsException with the specified error message and cause.
+   * Constructs a new MissingRequiredArgumentException with the specified error message and cause.
    *
    * @param message the error message
    * @param cause   the cause of the exception
    */
-  public JSimpleArgsException(String message, Throwable cause) {
+  public MissingRequiredArgumentException(String message, Throwable cause) {
     super(message, cause);
   }
 
   /**
-   * Constructs a new JSimpleArgsException with the specific cause.
+   * Constructs a new MissingRequiredArgumentException with the specific cause.
    *
    * @param cause the cause of the exception
    */
-  public JSimpleArgsException(Throwable cause) {
+  public MissingRequiredArgumentException(Throwable cause) {
     super(cause);
   }
 }

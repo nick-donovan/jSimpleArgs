@@ -15,53 +15,38 @@ To use jSimpleArgs in your Java project, you can download the latest release fro
 To use JSimpleArgs in your project, simply create an instance of the `JSimpleArgs` class and create new arguments using the `newArgument()` method. You can then parse command-line arguments using the `parse()` method. Here's an example:
 
     import dev.nicholasdonovan.jsimpleargs.JSimpleArgs;
-    import dev.nicholasdonovan.jsimpleargs.exceptions.JSimpleArgsException;
-
-    public class MyApplication {
-      public static void main(String[] args) throws JSimpleArgsException {
-        // args = {"-i", "/folder1/file1.txt"};
-        String parserHelpString = """  
-            This is an example of a parser help string.
-              You can add usage instructions here or other details you like.
-            """;
-        JSimpleArgs parser = new JSimpleArgs()
-            .setUsage("Usage: java -jar MyApplication -i <file>")
-            .setHelp(parserHelpString);
-
-        try {
-          parser.newArgument("-i", "--input", "The path to the input file.")
-              .hasValue()
-              .required()
-              .help("""  
-                  Input flag help:
-                    This string tells the program which file(s) to scan.
-                    Multiple can be specified, but will be scanned sequentially
-                      Usage examples:
-                        -i /home/user/path1/file1.txt
-                        -i /home/user/path1/file1.txt /home/user/path1/file2.txt
-                        --input /home/user/path1/file1.txt
-                        --input /home/user/path1/file1.txt /home/user/path1/file2.txt
-                  """)
-              .defaultValue("/default/dir/");
-          parser.parse(args);
-          if (parser.getShowHelp()) {
-            System.out.println(parser.getHelp());
-          }
-        } catch (JSimpleArgsException e) {
-          System.err.println(e.getMessage());
+    import dev.nicholasdonovan.jsimpleargs.exceptions.InvalidInputException;
+    import dev.nicholasdonovan.jsimpleargs.exceptions.InvalidParserUsageException;
+    
+    public class Main {
+        public static void main(String[] args) throws InvalidParserUsageException, InvalidInputException {
+            // args = {"-i", "/folder1/file1.txt"};
+            JSimpleArgs parser = new JSimpleArgs();
+            
+            // Create a new keyword argument
+            parser.newArgument("-i", "--input", "The path to the input file.")
+                .required()
+                .requiresValue();
+        
+            // Parse the 'args' array
+            parser.parse(args);
+        
+            // Get the argument's value
+            String value = parser.getArgument("-i").getValue();
+        
+            // Print the value
+            System.out.println(value);
+        
+            // `/folder1/file1.txt` is printed.
         }
-
-        String value = parser.getArgument("-i").getValue();
-
-        System.out.println(value);
-        // `/folder1/file1.txt` is printed.
-      }
     }
 
 
-In this example, we create an JSimpleArgs object and add an argument with the short name `-i`, long name `--input`, its description to `"The path to the input file."`, its need for a value with `hasValue()`, its requiredness with `required()`, a help string with `help()`, and a default value with `defaultValue()`. 
+In this example, we create an JSimpleArgs object and add an argument with the short name `-i`, long name `--input`, its description to `"The path to the input file."`, its requiredness with `required()`, and the fact that it requires a value with `requiresValue()`. 
 
-We then parse the command-line arguments using the parse() method, which may throw a JSimpleArgsException if there are any errors. We catch and handle this exception. Finally, we retrieve the value of the argument using the `getValue()` method of the parser, and print it to the console.
+We then parse the command-line arguments using the parse() method, which may throw either an `InvalidInputException` exception if the command line input is invalid, or an `InvalidParserUsageException` exception if the programmer used the parser incorrectly.
+
+Finally, we retrieve the value of the argument using the `getValue()` method of the parser, and print it to the console.
 
 JSimpleArgs will automatically generate a help message for your program based on the arguments you define. You can customize the help message using the `setHelp()` method.
 

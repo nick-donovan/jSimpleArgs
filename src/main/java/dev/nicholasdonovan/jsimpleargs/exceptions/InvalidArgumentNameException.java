@@ -24,9 +24,7 @@ package dev.nicholasdonovan.jsimpleargs.exceptions;
  * retrieving the argument was not finished, or there are invalid characters in the argument name.
  */
 public class InvalidArgumentNameException extends Exception {
-  /**
-   * Constructs a new InvalidArgumentNameException with a default message.
-   */
+  /** Constructs a new InvalidArgumentNameException with a default message. */
   public InvalidArgumentNameException() {
     super();
   }

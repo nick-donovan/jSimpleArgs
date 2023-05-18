@@ -15,45 +15,49 @@
  * <p>
  * You should have received a copy of the GNU General Public License
  * along with jSimpleArgs. If not, see <http://www.gnu.org/licenses/>.
+ * <p>
+ * A generic exception for the library and can act as a wrapper exception class for easy handling. All other exceptions
+ * should throw to a InvalidInputException to limit the need for multiple catches or throw declarations.
  */
+
 
 package dev.nicholasdonovan.jsimpleargs.exceptions;
 
 /**
- * Indicates that an argument's value(s) are invalid, such as missing argument value, too many values, or values
- * aren't allowed.
+ * A generic exception for the library and can act as a wrapper exception class for easy handling. All other exceptions
+ * should throw to a InvalidInputException to limit the need for multiple catches or throw declarations.
  */
-public class IllegalValueException extends Exception {
-  /** Constructs a new IllegalValueException with a default message. */
-  public IllegalValueException() {
+public class InvalidInputException extends Exception {
+  /** Constructs a new InvalidInputException with a default message. */
+  public InvalidInputException() {
     super();
   }
 
   /**
-   * Constructs a new IllegalValueException with a specified message.
+   * Constructs a new InvalidInputException with a specified message.
    *
    * @param message the error message
    */
-  public IllegalValueException(String message) {
+  public InvalidInputException(String message) {
     super(message);
   }
 
   /**
-   * Constructs a new IllegalValueException with the specified error message and cause.
+   * Constructs a new InvalidInputException with the specified error message and cause.
    *
    * @param message the error message
    * @param cause   the cause of the exception
    */
-  public IllegalValueException(String message, Throwable cause) {
+  public InvalidInputException(String message, Throwable cause) {
     super(message, cause);
   }
 
   /**
-   * Constructs a new IllegalValueException with the specific cause.
+   * Constructs a new InvalidInputException with the specific cause.
    *
    * @param cause the cause of the exception
    */
-  public IllegalValueException(Throwable cause) {
+  public InvalidInputException(Throwable cause) {
     super(cause);
   }
 }
