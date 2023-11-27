@@ -423,12 +423,12 @@ class Parser {
     StringBuilder string = new StringBuilder();
 
     StringBuilder keywordArgs = buildKeywordArgumentsString();
-    if (!keywordArgs.isEmpty()) {
+    if (keywordArgs.length() != 0) {
       string.append("Keyword Arguments: \n").append(keywordArgs).append("\n");
     }
 
     StringBuilder positionalArgs = buildPositionalArgumentsString();
-    if (!positionalArgs.isEmpty()) {
+    if (positionalArgs.length() != 0) {
       string.append("Positional Arguments: \n").append(positionalArgs);
     }
 

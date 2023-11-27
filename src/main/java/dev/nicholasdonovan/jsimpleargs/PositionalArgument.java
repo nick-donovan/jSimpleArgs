@@ -51,9 +51,9 @@ class PositionalArgument extends Argument {
   @Override
   public boolean equals(Object rhs) {
     if (this == rhs) return true;
-    if (!(rhs instanceof PositionalArgument right)) return false;
+    if (!(rhs instanceof PositionalArgument)) return false;
 
-    return name.equals(right.name);
+    return name.equals(((PositionalArgument) rhs).name);
   }
 
   /**

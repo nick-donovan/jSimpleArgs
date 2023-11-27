@@ -64,10 +64,10 @@ class KeywordArgument extends Argument {
   @Override
   public boolean equals(Object rhs) {
     if (this == rhs) return true;
-    if (!(rhs instanceof KeywordArgument right)) return false;
+    if (!(rhs instanceof KeywordArgument)) return false;
 
-    if (!shortName.equals(right.shortName)) return false;
-    return longName.equals(right.longName);
+    if (!shortName.equals(((KeywordArgument) rhs).shortName)) return false;
+    return longName.equals(((KeywordArgument) rhs).longName);
   }
 
   /**
