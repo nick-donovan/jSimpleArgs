@@ -5,6 +5,12 @@ plugins {
 group = 'dev.nicholasdonovan.jsimpleargs'
 version = '2.0.1'
 
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    withSourcesJar()
+    withJavadocJar()
+}
+
 repositories {
     mavenCentral()
 }
