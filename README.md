@@ -1,4 +1,4 @@
-
+# **NOTICE**: jSimpleArgs is now maintained on [GitLab](https://gitlab.com/nick-donovan/jSimpleArgs). 
 # jSimpleArgs
 jSimpleArgs is a flexible and powerful library for parsing command-line arguments in Java applications, while providing clear and helpful error messages and support for displaying help text to the user. It supports both short and long argument names, as well as assigning values to arguments and concatenating multiple short arguments together.
 
