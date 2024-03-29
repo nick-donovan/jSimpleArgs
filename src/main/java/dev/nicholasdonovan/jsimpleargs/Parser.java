@@ -77,7 +77,7 @@ class Parser {
   }
 
   /** Add command line items to list */
-  private List<String> parseItemsToList(String[] argsArray) {
+  List<String> parseItemsToList(String[] argsArray) {
     List<String> items = new ArrayList<>();
     for (int i = 0; i < argsArray.length; ++i) {
       String item = argsArray[i];
@@ -122,7 +122,7 @@ class Parser {
   }
 
   /** Sets the appropriate help flags whenever help is requested by the user */
-  private void setHelpRequested(List<String> args, int i) {
+  void setHelpRequested(List<String> args, int i) {
     if (isArgumentHelp(args, i)) {
       requestHelpForArgument(args, i);
     } else {
@@ -166,13 +166,13 @@ class Parser {
   }
 
   /** Checks if the argument has an assigned value (ex: --input=./file) */
-  private boolean isArgumentAssigned(String arg) {
+  boolean isArgumentAssigned(String arg) {
     String[] splitArg = arg.split("=");
     return splitArg.length == 2 && isArgument(splitArg[0]) && !splitArg[1].isEmpty();
   }
 
   /** Splits an assigned argument and adds the two values into the list (ex: --input=./file). */
-  private void addAssignedArguments(String arg, List<String> args) {
+  void addAssignedArguments(String arg, List<String> args) {
     String[] splitArg = arg.split("=");
     args.add(splitArg[0]);
     args.add(splitArg[1]);
@@ -187,7 +187,7 @@ class Parser {
    * Determines if an argument is a concatenation of several short arguments and adds each short argument as a separate
    * string to the given {@code items} list.
    */
-  private void addConcatenatedArguments(String item, List<String> items) {
+  void addConcatenatedArguments(String item, List<String> items) {
     // Hold potential arguments until either it's not concat or `potentialConcat` is empty
     List<String> potentialArguments = new ArrayList<>();
 
@@ -274,7 +274,7 @@ class Parser {
   }
 
   /** Marks parsed arguments as present */
-  private void markArgumentsAsPresent(List<String> args) {
+  void markArgumentsAsPresent(List<String> args) {
     for (String argument : args) {
       getArgument(argument).setPresentTrue();
     }
@@ -292,7 +292,7 @@ class Parser {
   }
 
   /** Parse the argument value from the list */
-  private void parseValues(List<String> args) throws InvalidInputException {
+  void parseValues(List<String> args) throws InvalidInputException {
     try {
       parseArgumentValues(args);
     } catch (UnknownArgumentException | IllegalValueException e) {
@@ -406,6 +406,11 @@ class Parser {
   /** Returns a collection of arguments */
   Collection<Argument> getArguments() {
     return this.nameToArgument.values();
+  }
+
+  /** Returns the requested help argument */
+  Argument getRequestedHelpArgument() {
+    return requestedHelpArgument;
   }
 
   /** Returns the help string of an argument that the user requested help for */
